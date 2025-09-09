@@ -1,0 +1,30 @@
+{
+  "vm_name": "batocera",
+  "iommu": [3, 10, 14],
+  "settings": {
+    "hugepages": true,
+    "intel_gvtg": true,
+    "cpufreq_performance": true,
+    "vdisk_partition": "6CB240CBB2409C08"
+  },
+  "udp_forwards": {
+    "forward1": {
+        "host": 47990,
+        "guest": 48990
+    },
+    "forward2": {
+        "host": "47991-48000",
+        "guest": 48990
+    }
+  },
+  "tcp_forwards": {
+    "forward1": {
+        "host": 47990,
+        "guest": 48990
+    },
+    "forward2": {
+        "host": "47991-48000",
+        "guest": 48990
+    }
+  }
+}
