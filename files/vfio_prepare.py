@@ -3,26 +3,31 @@ import os
 import subprocess
 import json
 import argparse
+import platform
+
+from functions.check_cpu import check_cpu
+
+vfio_path = "/penguin/desarrollo/vfio-overpower/files"
+libvirt_path = "/etc/libvirt"
+board_name = subprocess.getoutput("cat /sys/devices/virtual/dmi/id/board_name")
 
 def isolate_iommu(group):
     print("aislando grupo iommu " + str(group))
 
 def intel_gvtg(is_enabled):
-    if is_enabled == True:
-        print("habilitar gráfica virtual gvtg")
-        print("o poner un mensajito si la cpu no es soportada (intel con F, intel <5 gen, intel >10 gen, amd, otros)")
+    if is_enabled == True and check_cpu == True:
+        subprocess.run([vfio_path + "/scripts/intel-gvt-enable.sh"])
 
 def cpufreq_performance(is_enabled):
     if is_enabled == True:
-        print("habilitar modo performnace")
-        print("aprovecharse de asusctl en lo posible")
+        subprocess.run([vfio_path + "/scripts/cpufreq-performance.sh"])
 
 def vdisk_partition(disk_uuid):
     if os.path.isfile("/dev/disk/by-uuid/" + disk_uuid):
-        subprocess.run(["/usr/local/etc/vfio/bin/vfio-vdisk-setup"])
+        subprocess.run([vfio_path + "/scripts/vdisk-setup.sh"])
 
 def hugepages(vm_name, is_enabled):
-    vm_xml_path = "/etc/libvirt/qemu/" + vm_name + ".xml"
+    vm_xml_path = libvirt_path + "/qemu/" + vm_name + ".xml"
     huge_in_xml = False
 
     if is_enabled == True and os.path.isfile(vm_xml_path):
@@ -31,16 +36,12 @@ def hugepages(vm_name, is_enabled):
                 huge_in_xml = True
                 xml.close
     if huge_in_xml == True:
-        subprocess.run(["/usr/local/etc/vfio/bin/vfio-alloc-hugepages"])
+        subprocess.run([vfio_path + "/scripts/hugepages-alloc.sh"])
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser("simple_example")
-    parser.add_argument("file", help="File name", type=str)
-    args = parser.parse_args()
-
+def vfio_prepare(vm_name):
     data = ""
-    with open(args.file) as f:
+
+    with open(os.path.join(vfio_path, "vm-config", vm_name + "_" + board_name + ".json")) as f:
         data = json.load(f)
         f.close
 
@@ -50,7 +51,7 @@ if __name__ == '__main__':
         isolate_iommu(i)
 
     intel_gvtg(settings_dict["intel_gvtg"])
-    cpufreq_performance(settings_dict["cpufreq_performance"])
+    #cpufreq_performance(settings_dict["cpufreq_performance"])
     vdisk_partition(settings_dict["vdisk_partition"])
     hugepages(vm_name, settings_dict["hugepages"])
 
