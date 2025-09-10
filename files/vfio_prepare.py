@@ -4,10 +4,14 @@ import subprocess
 import json
 import functions.global_vars as globals
 from functions.check_cpu import check_cpu
-
-
+from functions import iommu_utils as iommu
 def isolate_iommu(group):
-    print("aislando grupo iommu " + str(group))
+    if group > iommu.count_groups() - 1:
+        return
+    if group < 0:
+        return
+    
+    iommu.generate_group_files()
 
 def intel_gvtg(is_enabled):
     if is_enabled == True and check_cpu == True:
