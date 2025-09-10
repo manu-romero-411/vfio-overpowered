@@ -1,9 +1,4 @@
 import re
-import os
-import subprocess
-import json
-import argparse
-import platform
 
 def check_cpu():
     cpu_name = None

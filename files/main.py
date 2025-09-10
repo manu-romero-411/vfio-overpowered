@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import vfio_prepare as prep
+import functions.global_vars as globals
 
 if __name__ == '__main__':
     #parser = argparse.ArgumentParser("simple_example")
