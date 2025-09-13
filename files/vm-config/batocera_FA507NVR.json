@@ -2,9 +2,9 @@
   "vm_name": "batocera",
   "iommu": [14],
   "settings": {
-    "hugepages": true,
+    "hugepages": false,
     "intel_gvtg": true,
-    "cpufreq_performance": true,
+    "cpufreq_performance": false,
     "vdisk_partition": "6CB240CBB2409C08"
   },
   "udp_forwards": {

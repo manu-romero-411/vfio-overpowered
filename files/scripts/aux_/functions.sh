@@ -1,15 +1,11 @@
 #!/bin/bash
 
-function get_vga_device_num(){
-    lspci -nnk | grep -E 'VGA|Display' | wc -l
-}
-
 function kill_proc(){
         systemctl --user -M 1000@ stop sunshine.service
         lsof -n | grep "$1" | awk '{print $2}' | awk '!seen[$0]++' | xargs -I {} kill -9 {}
-        fuser -v "$1" | nl -b n | tail -n 1 | xargs -I {} kill -9 {}
         sleep 2
 }
 
-
-
+function kill_proc_fuser(){
+        fuser -v "$1" | nl -b n | tail -n 1 | xargs -I {} kill -9 {}
+}
