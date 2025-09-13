@@ -1,6 +1,6 @@
 {
   "vm_name": "batocera",
-  "iommu": [14],
+  "iommu": [],
   "settings": {
     "hugepages": false,
     "intel_gvtg": true,

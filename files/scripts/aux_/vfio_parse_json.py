@@ -107,12 +107,11 @@ def main():
     # Lógica según la opción elegida
     if (args.cpufreq and data["settings"]["cpufreq_performance"]) \
     or (args.hugepages and data["settings"]["hugepages"]) \
-    or (args.gvtg and data["settings"]["intel_gvtg"]):
+    or (args.gvtg and data["settings"]["intel_gvtg"]) \
+    or (args.iommu is not None and int(args.iommu) in data["iommu"]):
         print("1")
     elif (args.vdisk and data["settings"]["vdisk_partition"].lower() != "none"):
         print(data["settings"]["vdisk_partition"])
-    elif (int(args.iommu) in data["iommu"]):
-        print("1")
     else:
         print("0")
 

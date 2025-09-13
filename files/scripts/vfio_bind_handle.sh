@@ -1,9 +1,5 @@
 #!/bin/bash
 
-#modprobe vfio
-#modprobe vfio_pci
-#modprobe vfio_iommu_type1
-
 function vfio_bind(){
     pci_node=$1
     vendor_id=$2

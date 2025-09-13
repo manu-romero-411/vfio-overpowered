@@ -1,5 +1,9 @@
 #!/bin/bash
 
+rootdir=$(dirname "$(realpath $0)")
+source "${rootdir}/vfio.env"
+source "${rootdir}/scripts/aux_/functions.sh"
+
 function logout_gui(){
     ## Get display manager on systemd based distros ##
     if [[ -x /run/systemd/system ]]; then

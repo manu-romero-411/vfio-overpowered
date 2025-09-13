@@ -35,3 +35,10 @@ def check_cpu():
 
     # 4. Valida rango de gen 5–10
     return 5 <= gen <= 10
+
+if __name__ == "__main__":
+    if check_cpu:
+        print("1")
+    else:
+        print("0")
+    exit(0)

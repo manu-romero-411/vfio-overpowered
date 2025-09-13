@@ -1,8 +1,10 @@
 #!/bin/bash
-source ./global-vars.sh
-source ./single-gpu-prepare.sh
-source ./single-gpu-release.sh
-source ./vfio-bind-handle.sh
+
+rootdir=$(dirname "$(realpath $0)")
+source "${rootdir}/vfio.env"
+source "${rootdir}/scripts/single_gpu_prepare.sh"
+source "${rootdir}/scripts/single_gpu_release.sh"
+source "${rootdir}/scripts/vfio_bind_handle.sh"
 
 function isolate_iommu(){
     modprobe vfio
@@ -10,13 +12,12 @@ function isolate_iommu(){
     modprobe vfio_iommu_type1
 
     iommu_act=$1
-    num_iommu_total=$(ls /sys/kernel/iommu_groups/ | tr " " "\n" | wc -l)
+    num_iommu_total=$(find /sys/kernel/iommu_groups/ -maxdepth 1 -mindepth 1 | wc -l)
     if [ "${iommu_act}" -ge "${num_iommu_total}" ] || [ "${iommu_act}" -lt 0 ]; then
         return 1
     fi
 
     for i in "${KERNEL_IOMMU_PATH}/${iommu_act}/devices/"*; do
-	echo $i
         vendor_id=$(cat "${i}/vendor" | cut -d "x" -f2)
         device_id=$(cat "${i}/device" | cut -d "x" -f2)
         driver_name=$(cat "${i}/uevent" | grep "DRIVER" | cut -d "=" -f2)
@@ -106,9 +107,3 @@ function recover_iommu(){
         fi
     done
 }
-
-case $1 in
-    "-p") isolate_iommu 14;;
-    "-r") recover_iommu 14;;
-    *) true;;
-esac

@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
-realpath=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-source ${realpath}/vfio.env
-source ${realpath}/scripts/iommu_handle.sh
-source ${realpath}/scripts/extra/cpufreq.sh
-source ${realpath}/scripts/extra/hugepages.sh
-source ${realpath}/scripts/extra/intel_gvtg.sh
-source ${realpath}/scripts/extra/vdisk.sh
+rootdir=$(dirname "$(realpath $0)")
+source "${rootdir}"/vfio.env
+source "${rootdir}"/scripts/iommu_handle.sh
+source "${rootdir}"/scripts/extra/cpufreq.sh
+source "${rootdir}"/scripts/extra/hugepages.sh
+source "${rootdir}"/scripts/extra/intel_gvtg.sh
+source "${rootdir}"/scripts/extra/vdisk.sh
 
 function set_cpufreq(){
-    if [ $(vfio_json_parser "${1}" --cpufreq) -eq 1 ]; then
-        case $2 in:
+    if [ $(python3 "${rootdir}"/scripts/aux_/vfio_parse_json.py "${1}" --cpufreq) -eq 1 ]; then
+        case $2 in
             "prepare") set_ondemand;;
             "release") set_performance;;
             *) true;;
@@ -19,10 +19,10 @@ function set_cpufreq(){
 }
 
 function set_hugepages(){
-    if [ $(vfio_json_parser "${1}" --hugepages) -eq 1 ]; then
-        case $2 in:
-            "prepare") hugepages_allocate ${group};;
-            "release") hugepages_deallocate ${group};;
+    if [ $(python3 "${rootdir}"/scripts/aux_/vfio_parse_json.py "${1}" --hugepages) -eq 1 ]; then
+        case $2 in
+            "prepare") hugepages_allocate ${1};;
+            "release") hugepages_deallocate ${1};;
         esac
     fi
 }
@@ -30,39 +30,43 @@ function set_hugepages(){
 function set_intel_gvtg(){
     #cpu_name=$(cat /proc/cpuinfo | grep model | grep name | head -n 1 | cut -d":" -f2 | xargs echo -n)
     #if echo ${cpu_name} | grep "Intel"; then
-    if [ $(vfio_json_parser "${1}" --gvtg) -eq 1 ]; then
-        case $2 in:
-            "prepare") vdisk_setup ${group};;
-            "release") vdisk_unsetup ${group};;
+    if [ $(python3 "${rootdir}"/scripts/aux_/vfio_parse_json.py "${1}" --gvtg) -eq 1 ]; then
+        case $2 in
+            "prepare") vdisk_setup "${1}";;
+            "release") vdisk_unsetup "${1}";;
         esac
     fi
     #fi
 }
 
 function set_vdisk(){
-    disk=$(vfio_json_parser "${1}" --vdisk)
-    if [ ! -z ${disk} ] && [ -e "/dev/disk/by-uuid/${disk}"]; then
-        case $2 in:
-            "prepare") vdisk_setup ${group};;
-            "release") vdisk_unsetup ${group};;
+    disk=$(python3 "${rootdir}"/scripts/aux_/vfio_parse_json.py "${1}" --vdisk)
+    echo "intentando tocar el disco ${disk}" 
+    if [ ! -z ${disk} ] && [ -e "/dev/disk/by-uuid/${disk}" ]; then
+        case $2 in
+            "prepare") vdisk_setup "${1}";;
+            "release") vdisk_unsetup "${1}";;
         esac
     fi
 }
 
 function get_iommu_groups(){
-    if [ $(vfio_json_parser "${1}" --iommu "${2}") -eq 1 ]; then
+    if [[ "$(python3 "${rootdir}"/scripts/aux_/vfio_parse_json.py ${1} --iommu ${2})" == "1" ]]; then
         echo 1
+    else 
+        echo 0
     fi
-    echo 0
 }
 
 function iommu_main(){
     for i in "${KERNEL_IOMMU_PATH}"/*; do
         group=$(basename "$i")
-        if [ $(get_iommu_groups ${1} ${group}) -eq 1 ]; then
-            case $2 in:
-                "prepare") isolate_iommu ${group};;
-                "release") release_iommu ${group};;
+        #echo $(get_iommu_groups ${1} ${group}) ${group}
+        if [[ "$(get_iommu_groups ${1} ${group})" == "1" ]]; then
+            #echo "$1 $2 ${group}"
+            case $2 in
+                "prepare") isolate_iommu "${group}";;
+                "release") recover_iommu "${group}";;
             esac
         fi
     done
