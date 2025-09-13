@@ -77,7 +77,36 @@ def get_dev_name_from_node(node):
     name = " ".join(subprocess.getoutput("lspci -s " + str(node)).split(" ")[1:])
     return name
 
-def generate_group_files():
+def generate_group_file(group):
+    #os.makedirs(os.path.join(globals.IOMMU_DATA_PATH, str(cnt)), exist_ok=True)
+    dev_list = get_group_devices(group)
+    nodes_list = get_uevent_data(group, "PCI_SLOT_NAME")
+    drivers_list = get_uevent_data(group, "DRIVER")
+
+    devices_dict = {}
+
+    for idx in range(len(dev_list)):
+        vendor_id, vendor_dev = dev_list[idx].split(":")
+        pci_info = ":".join(nodes_list[idx].split(":")[1:])  # "0000:01:00.0" → "01:00.0"
+        pci_bus, slot_func = pci_info.split(":")
+        pci_slot, pci_func = slot_func.split(".")
+
+        devices_dict[f"device{idx}"] = {
+            "device_name": get_dev_name_from_node(pci_info),
+            "device_pci_bus": pci_bus,
+            "device_pci_slot": pci_slot,
+            "device_pci_func": pci_func,
+            "device_vendor_id": vendor_id,
+            "device_vendor_dev": vendor_dev,
+            "default_linux_driver": drivers_list[idx]
+        }
+
+    # Guardar en archivo JSON
+    with open(os.path.join(globals.IOMMU_DATA_PATH, "iommu_" + str(group) + ".json"), "w") as f:
+        json.dump(devices_dict, f, indent=4)
+        f.close
+
+def generate_all_group_files():
     """
     Genera ficheros .json con información de cada dispositivo y grupo IOMMU, para su uso posterior.
     """
@@ -87,40 +116,64 @@ def generate_group_files():
     except (FileNotFoundError, PermissionError):
         return
 
-    # Filtrar subdirectorios que sean nombres numéricos
-    dev_list = []
-    nodes_list = []
-    drivers_list = []
-    cnt = 0
-    #if not os.path.exists(globals.IOMMU_DATA_PATH):
     os.makedirs(globals.IOMMU_DATA_PATH, exist_ok=True)
     for i in entries:
-        #os.makedirs(os.path.join(globals.IOMMU_DATA_PATH, str(cnt)), exist_ok=True)
-        dev_list = get_group_devices(cnt)
-        nodes_list = get_uevent_data(cnt, "PCI_SLOT_NAME")
-        drivers_list = get_uevent_data(cnt, "DRIVER")
+        generate_group_file(i)
 
-        devices_dict = {}
 
-        for idx in range(len(dev_list)):
-            vendor_id, vendor_dev = dev_list[idx].split(":")
-            pci_info = ":".join(nodes_list[idx].split(":")[1:])  # "0000:01:00.0" → "01:00.0"
-            pci_bus, slot_func = pci_info.split(":")
-            pci_slot, pci_func = slot_func.split(".")
+def get_all_nodes():
+    """
+    Genera ficheros .json con información de cada dispositivo y grupo IOMMU, para su uso posterior.
+    """
 
-            devices_dict[f"device{idx}"] = {
-                "device_name": get_dev_name_from_node(pci_info),
-                "device_pci_bus": pci_bus,
-                "device_pci_slot": pci_slot,
-                "device_pci_func": pci_func,
-                "device_vendor_id": vendor_id,
-                "device_vendor_dev": vendor_dev,
-                "default_linux_driver": drivers_list[idx]
-            }
+    try:
+        entries = sorted(os.listdir(os.path.join(globals.KERNEL_IOMMU_PATH)))
+    except (FileNotFoundError, PermissionError):
+        return
 
-        # Guardar en archivo JSON
-        with open(os.path.join(globals.IOMMU_DATA_PATH, "iommu_" + str(cnt) + ".json"), "w") as f:
-            json.dump(devices_dict, f, indent=4)
-            f.close
+    result = []
+    os.makedirs(globals.IOMMU_DATA_PATH, exist_ok=True)
+    for i in entries:
+        nodes_list = get_uevent_data(i, "PCI_SLOT_NAME")
+        for idx in range(len(nodes_list)):
+            result.append(":".join(nodes_list[idx].split(":")[1:]))
+    
+    return result
 
-        cnt = cnt + 1
+def get_all_dev_names():
+    ids = get_all_nodes()
+    result = []
+    for i in ids:
+        result.append(get_dev_name_from_node(i))
+
+    return result
+
+
+def find_vga_gpus():
+    vga_devices = []
+
+    if not os.path.exists(globals.KERNEL_IOMMU_PATH):
+        return vga_devices
+
+    for group_path in sorted(os.listdir(os.path.join(globals.KERNEL_IOMMU_PATH))):
+        devices_path = os.path.join(globals.KERNEL_IOMMU_PATH, group_path, "devices")
+        if not os.path.exists(devices_path):
+            continue
+            
+        if group_path == 14:
+            print("")
+        for dev_path in sorted(os.listdir(devices_path)):
+            class_file = os.path.join(devices_path, dev_path, 'class')
+            try:
+                # lee código de clase PCI (hex) y lo convierte a entero
+                with open(class_file, "r") as file:
+                    cls = int(file.read().strip(), 16)
+            
+            except (FileNotFoundError, ValueError):
+                continue
+
+            # el byte alto 0x03 indica VGA/Display controller
+            if (cls >> 16) == 0x03:
+                vga_devices.append(dev_path)
+
+    return vga_devices
