@@ -39,8 +39,8 @@ function set_intel_gvtg(){
     if echo ${cpu_name} | grep "Intel"; then
         if [ $(python3 "${rootdir}"/scripts/aux_/config_utils.py "${1}" --gvtg) -eq 1 ]; then
             case $2 in
-                "prepare") gvtg_enable "${1}";;
-                "release") gvtg_disable "${1}";;
+                "prepare") gvtg_enable "${VFIO_GVTG_ID}";;
+                "release") gvtg_disable "${VFIO_GVTG_ID}";;
             esac
         fi
     else
