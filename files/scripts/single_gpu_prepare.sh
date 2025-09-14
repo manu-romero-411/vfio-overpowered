@@ -17,7 +17,7 @@ function logout_gui(){
         fi
 
         while systemctl is-active --quiet "$DISPMGR.service"; do
-            sleep "1"
+            sleep 0.5
         done
         return
     fi
@@ -31,7 +31,7 @@ function logout_gui_kde(){
     fi
 
     while systemctl is-active --quiet "display-manager.service"; do
-        sleep 2
+        sleep 0.5
     done
     return
 }
@@ -50,7 +50,7 @@ function unbind_gui_and_tty(){
         rm -f /tmp/vfio-is-amd
     fi
 
-    sleep "1"
+    sleep 0.5
 
     if test -e "/tmp/vfio-bound-consoles"; then
         rm -f /tmp/vfio-bound-consoles
