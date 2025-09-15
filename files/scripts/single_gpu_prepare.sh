@@ -77,7 +77,8 @@ function nvidia_bind(){
     echo_info "Deteniendo procesos residuales que usen la GPU..."
     kill_proc nvidia
     kill_proc_fuser /dev/nvidia0
-
+    kill_proc_gpu
+    
     echo_info "Deteniendo framebuffer efi..."
     grep -qsF "true" "/tmp/vfio-is-nvidia" || echo "true" >/tmp/vfio-is-nvidia
     echo efi-framebuffer.0 | tee /sys/bus/platform/drivers/efi-framebuffer/unbind > /dev/null
@@ -95,6 +96,8 @@ function nvidia_bind(){
 }
 
 function amd_bind(){
+    echo_info "Deteniendo procesos residuales que usen la GPU..."
+    kill_proc_gpu
     echo_info "Deteniendo framebuffer efi..."
     grep -qsF "true" "/tmp/vfio-is-amd" || echo "true" >/tmp/vfio-is-amd
     echo efi-framebuffer.0 | tee /sys/bus/platform/drivers/efi-framebuffer/unbind > /dev/null
@@ -108,12 +111,11 @@ function amd_bind(){
 
 function i915_bind(){
     echo_info "Guardando nivel de brillo de la pantalla..."
-	cat /sys/class/backlight/intel_backlight/brightness | tee /tmp/brilloPantalla > /dev/null ## TODO: IMPLEMENTAR DE FORMA GENERAL
+	cat /sys/class/backlight/intel_backlight/brightness > /tmp/brilloPantalla ## TODO: IMPLEMENTAR DE FORMA GENERAL
     
     echo_info "Deteniendo procesos residuales que usen la GPU..."
     systemctl --user -M 1000@ stop sunshine.service
-	kill_proc i915
-	ps -aux | grep Xorg | grep -v grep | awk '{print $2}' | xargs -I {} kill -9 {}
+	kill_proc_gpu
     
     echo_info "Deteniendo framebuffer efi..."
     grep -qsF "true" "/tmp/vfio-is-i915" || (echo "true" | tee /tmp/vfio-is-i915 > /dev/null)

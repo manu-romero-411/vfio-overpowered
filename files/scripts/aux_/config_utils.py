@@ -134,7 +134,7 @@ def generate_vm_json(vm_name, json_file):
 
 def edit_vm_config(vm_name, json_file):
     if not os.path.exists(json_file):
-        generate_vm_json(vm_name)
+        generate_vm_json(vm_name, json_file)
 
     subprocess.run(["editor", json_file])
 

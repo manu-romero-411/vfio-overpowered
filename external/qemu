@@ -21,16 +21,4 @@ fi
 
 #echo $1 $2 $3 >> /pcgrande/Escritorio/aaa.log
 
-/bin/bash -x /usr/local/etc/vfio/vfio_overpower.sh "$GUEST_NAME" "$2" "$3" "$4"
-
-#if [[ $3 == "begin" ]] && [[ $2 == "prepare" ]]; then
-#	/bin/bash -x /usr/local/etc/vfio/vfio_overpower.sh $GUEST_NAME prepare begin
-#elif [[ $3 == "begin" ]] && [[ $2 == "start" ]]; then
-#	/bin/bash -x /usr/local/etc/vfio/vfio_overpower.sh $GUEST_NAME start begin
-#elif [[ $3 == "begin" ]] && [[ $2 == "started" ]]; then
-#	/bin/bash -x /usr/local/etc/vfio/vfio_overpower.sh "$GUEST_NAME" started begin
-#elif [[ $3 == "end" ]] && [[ $2 == "stopped" ]]; then
-#	/bin/bash -x /usr/local/etc/vfio/vfio_overpower.sh "$GUEST_NAME" release stopped
-#elif [[ $3 == "end" ]] && [[ $2 == "release" ]]; then
-#	/bin/bash -x /usr/local/etc/vfio/vfio_overpower.sh "$GUEST_NAME" release end "$4"
-#fi
+/bin/bash -x /usr/local/etc/vfio/vfio_overpower.sh "$GUEST_NAME" "$2" "${STATE_NAME}" "$4"

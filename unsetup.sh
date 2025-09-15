@@ -9,7 +9,8 @@ if [ -d "/usr/local/etc/vfio" ]; then
     rm -r "/usr/local/etc/vfio/"
 fi
 
-rm /etc/libvirt/hooks/qemu
-rm /usr/local/bin/vfio-edit-conf
+rm "/etc/libvirt/hooks/qemu"
+rm "/usr/local/bin/vfio-edit-conf"
+rm "/usr/local/bin/vfio-list-iommu"
 
 exit 0

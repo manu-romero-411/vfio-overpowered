@@ -54,8 +54,8 @@ function amd_unbind(){
 function i915_unbind(){
     if grep -q "true" "/tmp/vfio-is-i915" ; then
         echo_info "Restaurando nivel de brillo de la pantalla..."
+        cat "/tmp/brilloPantalla" | tee /sys/class/backlight/intel_backlight/brightness
         sleep 0.5
-        echo $(cat "/tmp/brilloPantalla") > /sys/class/backlight/intel_backlight/brightness
     fi
     rm "/tmp/vfio-is-i915"
 }
