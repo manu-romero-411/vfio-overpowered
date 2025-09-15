@@ -1,8 +1,6 @@
 #!/bin/bash
 
-rootdir=$(dirname "$(realpath $0)")
-source "${rootdir}/vfio.env"
-source "${rootdir}/scripts/aux_/functions.sh"
+source "${VFIO_PATH}/scripts/aux_/functions.sh"
 
 function logout_gui(){
     ## Get display manager on systemd based distros ##
@@ -37,6 +35,7 @@ function logout_gui_kde(){
 }
 
 function unbind_gui_and_tty(){
+    echo_warning "SINGLE GPU PASSTHROUGH - Se va a cerrar la sesión gráfica de escritorio."
     if pgrep -l "plasma" | grep "plasmashell"; then
         logout_gui_kde
     else
@@ -56,6 +55,7 @@ function unbind_gui_and_tty(){
         rm -f /tmp/vfio-bound-consoles
     fi
 
+    echo_info "Deteniendo consolas virtuales..."
     for (( i = 0; i < 16; i++)); do
         if test -x /sys/class/vtconsole/vtcon"${i}"; then
             if [ "$(grep -c "frame buffer" /sys/class/vtconsole/vtcon"${i}"/name)" = 1 ]; then
@@ -69,19 +69,22 @@ function unbind_gui_and_tty(){
 }
 
 function nvidia_bind(){
-    echo "Deteniendo procesos auxiliares y residuales de NVIDIA..."
+    echo_info "Deteniendo servicios de NVIDIA..."
+    systemctl --user -M 1000@ stop sunshine.service
     systemctl stop nvidia-persistenced.service
     systemctl stop "systemd-backlight@backlight:nvidia_0.service"
+
+    echo_info "Deteniendo procesos residuales que usen la GPU..."
     kill_proc nvidia
     kill_proc_fuser /dev/nvidia0
 
-    echo "Deteniendo framebuffer efi..."
+    echo_info "Deteniendo framebuffer efi..."
     grep -qsF "true" "/tmp/vfio-is-nvidia" || echo "true" >/tmp/vfio-is-nvidia
-    echo efi-framebuffer.0 > /sys/bus/platform/drivers/efi-framebuffer/unbind
+    echo efi-framebuffer.0 | tee /sys/bus/platform/drivers/efi-framebuffer/unbind > /dev/null
     systemctl stop "systemd-backlight@backlight:nvidia_0.service"
 
     ## Unload NVIDIA GPU drivers ##
-    echo "Liberando módulos de NVIDIA..."
+    echo_info "Liberando módulos de NVIDIA..."
     modprobe -r nvidia_uvm
     modprobe -r nvidia_drm
     modprobe -r nvidia_modeset
@@ -92,19 +95,30 @@ function nvidia_bind(){
 }
 
 function amd_bind(){
+    echo_info "Deteniendo framebuffer efi..."
     grep -qsF "true" "/tmp/vfio-is-amd" || echo "true" >/tmp/vfio-is-amd
-    echo efi-framebuffer.0 > /sys/bus/platform/drivers/efi-framebuffer/unbind
+    echo efi-framebuffer.0 | tee /sys/bus/platform/drivers/efi-framebuffer/unbind > /dev/null
 
-    ## Unload AMD GPU drivers ##
+    echo_info "Liberando módulos de AMD Radeon..."
     modprobe -r drm_kms_helper
     modprobe -r amdgpu
     modprobe -r radeon
     modprobe -r drm
 }
 
-function intel_bind(){
-    kill_proc i915
-    #kill_proc_fuser /dev/nvidia0
+function i915_bind(){
+    echo_info "Guardando nivel de brillo de la pantalla..."
+	cat /sys/class/backlight/intel_backlight/brightness | tee /tmp/brilloPantalla > /dev/null ## TODO: IMPLEMENTAR DE FORMA GENERAL
+    
+    echo_info "Deteniendo procesos residuales que usen la GPU..."
+    systemctl --user -M 1000@ stop sunshine.service
+	kill_proc i915
+	ps -aux | grep Xorg | grep -v grep | awk '{print $2}' | xargs -I {} kill -9 {}
+    
+    echo_info "Deteniendo framebuffer efi..."
+    grep -qsF "true" "/tmp/vfio-is-i915" || (echo "true" | tee /tmp/vfio-is-i915 > /dev/null)
+    echo efi-framebuffer.0 | tee /sys/bus/platform/drivers/efi-framebuffer/unbind > /dev/null
+    sleep 1
 }
 
 function list_vga(){

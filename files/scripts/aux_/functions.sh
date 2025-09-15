@@ -1,7 +1,6 @@
 #!/bin/bash
 
 function kill_proc(){
-        systemctl --user -M 1000@ stop sunshine.service
         lsof -n | grep "$1" | awk '{print $2}' | awk '!seen[$0]++' | xargs -I {} kill -9 {}
         sleep 2
 }

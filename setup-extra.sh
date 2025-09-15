@@ -2,8 +2,6 @@
 ## SCRIPT INDEPENDIENTE PARA EL SETUP DE VFIO EN INTEL
 ## FECHA: 21 de febrero de 2025
 
-rootdir=$(realpath $(dirname $0))
-
 function install_kabylake(){
   sudo mkdir -p /etc/libvirt/hooks
 
@@ -24,7 +22,7 @@ function install_kabylake(){
 
   sudo update-grub
 
-  echo 'SUBSYSTEM=="vfio", OWNER="root", GROUP="kvm"' | sudo tee /etc/udev/rules.d/10-vfio.rules
+  echo 'SUBSYSTEM=="vfio", OWNER="root", GROUP="kvm"' | sudo tee /etc/udev/rules.d/10-vfio.rules > /dev/null
 
   while [ true ]; do
       echo
@@ -52,10 +50,8 @@ function uninstall(){
   GRUB=$(echo $GRUB | sed 's/ / /g' | sed 's/ $//')
   # Actualiza el archivo /etc/default/grub con las nuevas opciones
   sudo sed -i "s/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"$GRUB\"/" /etc/default/grub
-  for i in ${rootdir}/scripts/*; do
-      sudo rm -r /usr/local/bin/$(basename $i)
-  done
 
+  sudo rm -r /usr/local/etc/vfio/*
   while [ true ]; do
       echo
       echo "Pulsa R y luego Intro para reiniciar..."

@@ -86,7 +86,7 @@ function {global_func_name}end_release(){{
     # Añadir permiso de ejecución
     permissions = os.stat(path).st_mode
     os.chmod(path, permissions | stat.S_IEXEC)
-    print(f"[INFO] Archivo de config para la VM {name} generado correctamente.")
+    print(f"[INFO] Archivo de hooks para la VM {name} generado correctamente.")
 
 def edit_qemuhook(name: str, path: str):
     if not os.path.exists(path):
@@ -104,22 +104,22 @@ def generate_vm_json(vm_name, json_file):
         "cpufreq_performance": False,
         "vdisk_partition": "none",
     }
-    udp_forwards = {
-        "forward1": {"host": 49990, "guest": 49990},
-        "forward2": {"host": "49991-50000", "guest": "49991-50000"},
-    }
-    tcp_forwards = {
-        "forward1": {"host": 49990, "guest": 49990},
-        "forward2": {"host": "49991-50000", "guest": "49991-50000"},
-    }
+    #udp_forwards = {
+    #    "forward1": {"host": 49990, "guest": 49990},
+    #    "forward2": {"host": "49991-50000", "guest": "49991-50000"},
+    #}
+    #tcp_forwards = {
+    #    "forward1": {"host": 49990, "guest": 49990},
+    #    "forward2": {"host": "49991-50000", "guest": "49991-50000"},
+    #}
 
     template = {
         "vm_name": vm_name,
         "iommu": iommu,
         "cpu_isolated": cpu_isolated,
-        "settings": settings,
-        "udp_forwards": udp_forwards,
-        "tcp_forwards": tcp_forwards,
+        "settings": settings
+    #    "udp_forwards": udp_forwards,
+    #    "tcp_forwards": tcp_forwards,
     }
 
     dir = os.path.dirname(json_file)
@@ -129,18 +129,18 @@ def generate_vm_json(vm_name, json_file):
     with open(json_file, "w", encoding="utf-8") as f:
         json.dump(template, f, indent=2, ensure_ascii=False)
         f.close
-    
-    print(f"[INFO] Archivo de hooks custom para la VM {vm_name} generado correctamente.")
+
+    print(f"[INFO] Archivo de config para la VM {vm_name} generado correctamente.")
 
 def edit_vm_config(vm_name, json_file):
     if not os.path.exists(json_file):
         generate_vm_json(vm_name)
-    
+
     subprocess.run(["editor", json_file])
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Configura una VM con una opción: cpu-freq, hugepages, gvtg, vdisk o iommu."
+        description="vfio_overpowered - utility for managing VM configuration files and parameters"
     )
 
     # Argumento posicional obligatorio
@@ -153,13 +153,13 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--cpufreq", action="store_true",
         help="Ajustar frecuencia de CPU")
-    
+
     group.add_argument("--hugepages", action="store_true",
         help="Configurar hugepages")
-    
+
     group.add_argument("--gvtg", action="store_true",
         help="Activar GVT-g")
-    
+
     group.add_argument("--vdisk", action="store_true",
         help="Asignar disco virtual (UUID)")
 
@@ -183,27 +183,26 @@ def main():
 
     args = parser.parse_args()
 
-    rootdir = os.path.realpath(\
+    VFIO_PATH = os.path.realpath(\
         os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", ".."))
     board_id = subprocess.getoutput("cat /sys/devices/virtual/dmi/id/board_name")
-    
-    json_file = os.path.join(rootdir, "vm_config", args.vm_name + "_" + board_id + ".json")
-    customhook_file = os.path.join(rootdir, "custom_hooks", args.vm_name + "_" + board_id + ".sh")
 
-    if not os.path.exists(json_file):
-        print("[INFO] Archivo de config no existente. Generando uno nuevo...")
-        generate_vm_json(args.vm_name, json_file)
+    json_file = os.path.join(VFIO_PATH, "vm_config", args.vm_name + "_" + board_id + ".json")
+    customhook_file = os.path.join(VFIO_PATH, "custom_hooks", args.vm_name + "_" + board_id + ".sh")
 
-    if not os.path.exists(customhook_file):
-        print("[INFO] Archivo de hook no existente. Generando uno nuevo...")
-        generate_customhook(args.vm_name, customhook_file)
+    #if not os.path.exists(json_file):
+    #    generate_vm_json(args.vm_name, json_file)
+
+    #if not os.path.exists(customhook_file):
+    #    generate_customhook(args.vm_name, customhook_file)
 
     data = ""
 
-    with open(json_file) as f:
-        data = json.load(f)
-        f.close
-        
+    if os.path.exists(json_file):
+        with open(json_file) as f:
+       	    data = json.load(f)
+            f.close
+
     if (args.cpufreq and data["settings"]["cpufreq_performance"]) \
     or (args.hugepages and data["settings"]["hugepages"]) \
     or (args.gvtg and data["settings"]["intel_gvtg"]) \
@@ -215,7 +214,7 @@ def main():
 
     elif (args.cpuisolate):
         if data["cpu_isolated"]:
-            print(','.join(str(x) for x in data["cpu_isolated"]))     
+            print(','.join(str(x) for x in data["cpu_isolated"]))
 
     elif args.genconfig is not None and \
     (args.genconfig != "keep" or not os.path.exists(customhook_file)):
@@ -227,9 +226,10 @@ def main():
 
     elif (args.editconfig):
         edit_vm_config(args.vm_name, json_file)
-        
+
     elif (args.edithook):
         edit_qemuhook(args.vm_name, customhook_file)
+
     else:
         print("0")
 

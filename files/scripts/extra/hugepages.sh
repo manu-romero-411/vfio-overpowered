@@ -2,7 +2,7 @@
 
 function hugepages_allocate(){
     ## Load the config file
-    source "/usr/local/etc/vfio/hugepages.conf"
+    source "${VFIO_PATH}/hugepages.conf"
 
     ## Calculate number of hugepages to allocate from memory (in MB)
     HUGEPAGES="$(($MEMORY/$(($(grep Hugepagesize /proc/meminfo | awk '{print $2}')/1024))))"

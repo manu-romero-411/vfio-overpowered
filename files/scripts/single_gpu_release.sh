@@ -1,18 +1,7 @@
 #!/bin/bash
 
 function return_gui(){
-    input="/tmp/vfio-store-display-manager"
-    while read -r DISPMGR; do
-    if command -v systemctl; then
-        ## Make sure the variable got collected ##
-        systemctl start "$DISPMGR.service"
-    else
-        if command -v sv; then
-        sv start "$DISPMGR"
-        fi
-    fi
-    done < "$input"
-
+    echo_info "Reiniciando consolas virtuales..."
     input2="/tmp/vfio-bound-consoles"
     while read -r consoleNumber; do
     if test -x /sys/class/vtconsole/vtcon"${consoleNumber}"; then
@@ -22,12 +11,24 @@ function return_gui(){
         fi
     fi
     done < "$input2"
+
+    echo_info "Reiniciando sesión de escritorio..."
+    input="/tmp/vfio-store-display-manager"
+    while read -r DISPMGR; do
+    if command -v systemctl > /dev/null; then
+        ## Make sure the variable got collected ##
+        systemctl start "$DISPMGR.service"
+    else
+        if command -v sv; then
+        sv start "$DISPMGR"
+        fi
+    fi
+    done < "$input"       
 }
 
 function nvidia_unbind(){
     if grep -q "true" "/tmp/vfio-is-nvidia" ; then
-        ## Load NVIDIA drivers ##
-        echo "Cargando módulos de NVIDIA..."
+        echo_info "Reiniciando drivers de NVIDIA..."
         modprobe drm
         modprobe drm_kms_helper
         modprobe i2c_nvidia_gpu
@@ -41,7 +42,7 @@ function nvidia_unbind(){
 
 function amd_unbind(){
     if  grep -q "true" "/tmp/vfio-is-amd" ; then
-        ## Load AMD drivers ##
+        echo_info "Reiniciando drivers de AMD Radeon..."
         modprobe drm
         modprobe amdgpu
         modprobe radeon
@@ -50,42 +51,12 @@ function amd_unbind(){
     rm "/tmp/vfio-is-amd"
 }
 
-
-function intel_unbind(){
-    kill_proc i915
-    #kill_proc_fuser /dev/nvidia0
-}
-
-function list_vga(){
-    lspci -nn | grep -e VGA
-}
-
-function check_single_pt(){
-    if [ $(list_vga | wc -l) -ne 1 ]; then
-        return
+function i915_unbind(){
+    if grep -q "true" "/tmp/vfio-is-i915" ; then
+        echo_info "Restaurando nivel de brillo de la pantalla..."
+        sleep 0.5
+        echo $(cat "/tmp/brilloPantalla") > /sys/class/backlight/intel_backlight/brightness
     fi
-
-    if list_vga | grep "${1}:${2}" > /dev/null 2>&1; then
-        if list_vga | grep NVIDIA > /dev/null 2>&1; then
-            echo nvidia
-        elif list_vga | grep AMD > /dev/null 2>&1; then
-            echo amd
-        elif list_vga | grep Intel > /dev/null 2>&1; then
-            echo intel
-        else
-            echo ""
-        fi
-    else
-        echo ""
-    fi
-}
-
-function single_gpu_passthrough(){
-    unbind_gui_and_tty
-    case $1 in
-        "nvidia") nvidia_bind;;
-        "amd") amd_bind;;
-        *) true;;
-    esac
+    rm "/tmp/vfio-is-i915"
 }
 
