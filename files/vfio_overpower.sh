@@ -85,16 +85,37 @@ function get_iommu_groups(){
 }
 
 function iommu_main(){
+    cp -r "/etc/libvirt/qemu/${1}.xml" /tmp
     for i in "${KERNEL_IOMMU_PATH}"/*; do
         group=$(basename "$i")
         if [[ "$(get_iommu_groups ${1} ${group})" == "1" ]]; then
+            echo ${group} in
             echo_info "(Des)asignando grupo IOMMU ${group} para VM ${1}..."
             case $2 in
                 "prepare") isolate_iommu "${group}";;
                 "release") recover_iommu "${group}";;
             esac
+        else
+            echo ${group} out
+            # PARAR LA MÁQUINA VIRTUAL SI HAY ALGÚN DISPOSITIVO NO COLOCADO EN LA CONFIG
+            if [[ "$2" == "prepare" ]]; then
+                for j in "${KERNEL_IOMMU_PATH}/${group}/devices"/*; do
+                    domain=$(basename "$j" | cut -d":" -f1)
+                    bus=$(basename "$j" | cut -d":" -f2)
+                    slot=$(basename "$j" | cut -d":" -f3 | cut -d"." -f1)
+                    function1=$(basename "$j" | cut -d":" -f3 | cut -d"." -f2)
+                    string="<address domain='0x${domain}' bus='0x${bus}' slot='0x${slot}' function='0x${function1}'/>"
+
+                    if cat "/tmp/${1}.xml" | grep "${string}"; then
+                        echo "Se está intentando usar un dispositivo no permitido. Configura IOMMU para esta máquina."
+                        exit 1
+                    fi
+                done
+            fi
         fi
     done
+    rm /tmp/${1}.xml
+
 }
 
 function set_customhooks(){

@@ -200,7 +200,7 @@ def main():
 
     if os.path.exists(json_file):
         with open(json_file) as f:
-       	    data = json.load(f)
+            data = json.load(f)
             f.close
 
     if (args.cpufreq and data["settings"]["cpufreq_performance"]) \

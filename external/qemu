@@ -8,7 +8,7 @@
 # Add your hooks in /etc/libvirt/hooks/qemu.d/vm_name/hook_name/state_name.
 # For a list of available hooks, please refer to https://www.libvirt.org/hooks.html
 #
-#set -x
+
 GUEST_NAME="$1"
 STATE_NAME="$3"
 MISC="${@:4}"
@@ -19,6 +19,4 @@ if [ -z $1 ] || [ -z $2 ] || [ -z $3 ]; then
 	exit 1
 fi
 
-#echo $1 $2 $3 >> /pcgrande/Escritorio/aaa.log
-
-/bin/bash -x /usr/local/etc/vfio/vfio_overpower.sh "$GUEST_NAME" "$2" "${STATE_NAME}" "$4"
+/bin/bash /usr/local/etc/vfio/vfio_overpower.sh "$GUEST_NAME" "$2" "${STATE_NAME}" "$4"
