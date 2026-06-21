@@ -29,6 +29,11 @@ function vfio_bind_alt(){
     || echo_error "No se ha podido registrar ${vendor_id}:${device_id} en el módulo vfio_pci."
     echo "${pci_node}" | tee "/sys/bus/pci/drivers/vfio-pci/bind" > /dev/null \
     || echo_error "No se ha podido vincular ${vendor_id}:${device_id} al vfio_pci."
+
+    # case ${driver_name} in
+    #     "snd_hda_intel") modprobe -r snd_hda_intel;;
+    #     *) true;;
+    # esac
 }
 
 
@@ -53,6 +58,8 @@ function vfio_unbind_alt(){
     device_id=$3
     driver_name=$4
 
-    echo "${pci_node}" | tee "/sys/bus/pci/drivers/${driver_name}/bind" > /dev/null \
-    || echo_error "No se ha podido vincular ${vendor_id}:${device_id} al módulo ${driver_name}."
+    if [ -n "${driver_name}" ]; then
+        echo "${pci_node}" | tee "/sys/bus/pci/drivers/${driver_name}/bind" > /dev/null \
+        || echo_error "No se ha podido vincular ${vendor_id}:${device_id} al módulo ${driver_name}."
+    fi
 }

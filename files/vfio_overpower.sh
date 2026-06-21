@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-rootdir=$(dirname "$(realpath $0)")
-source "${rootdir}"/vfio.env
 
+rootdir=$(dirname "$(realpath $0)")
+
+source "${rootdir}"/vfio.env
 source "${VFIO_PATH}"/scripts/iommu_handle.sh
 source "${VFIO_PATH}"/scripts/extra/cpufreq.sh
 source "${VFIO_PATH}"/scripts/extra/hugepages.sh
@@ -77,26 +78,32 @@ function set_cpuisolate(){
 
 
 function get_iommu_groups(){
-    if [[ "$(python3 "${VFIO_PATH}"/scripts/aux_/config_utils.py ${1} --iommu ${2})" == "1" ]]; then
-        echo 1
-    else
-        echo 0
-    fi
+#    ls "${VFIO_PATH}"/vm_config/${1}_$(cat $BOARD_ID_PATH).json
+#    jq -r '.iommu[]' "${VFIO_PATH}"/vm_config/${1}_$(cat $BOARD_ID_PATH).json
+    RESULT=0
+    for i in $(jq -r '.iommu[]' "${VFIO_PATH}"/vm_config/${1}_$(cat $BOARD_ID_PATH).json); do
+	if [ $i -eq $2 ]; then
+            RESULT=1
+            break
+        fi
+    done
+    echo $RESULT
 }
 
 function iommu_main(){
     cp -r "/etc/libvirt/qemu/${1}.xml" /tmp
+
     for i in "${KERNEL_IOMMU_PATH}"/*; do
         group=$(basename "$i")
-        if [[ "$(get_iommu_groups ${1} ${group})" == "1" ]]; then
-            echo ${group} in
+        IOMMU_CHECK="$(get_iommu_groups ${1} ${group} | tail -n 1)"
+
+	if [ "${IOMMU_CHECK}" -eq 1 ]; then
             echo_info "(Des)asignando grupo IOMMU ${group} para VM ${1}..."
             case $2 in
                 "prepare") isolate_iommu "${group}";;
                 "release") recover_iommu "${group}";;
             esac
         else
-            echo ${group} out
             # PARAR LA MÁQUINA VIRTUAL SI HAY ALGÚN DISPOSITIVO NO COLOCADO EN LA CONFIG
             if [[ "$2" == "prepare" ]]; then
                 for j in "${KERNEL_IOMMU_PATH}/${group}/devices"/*; do
